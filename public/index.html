@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LX Music Sync Server - 数据可视化</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div id="login-overlay" class="overlay">
+        <div class="login-box glass">
+            <h1>访问控制</h1>
+            <p>请输入访问密码以继续</p>
+            <input type="password" id="access-password" placeholder="访问密码" />
+            <button id="login-btn">进入系统</button>
+            <p id="login-error" class="error-msg"></p>
+        </div>
+    </div>
+
+    <div id="app" class="hidden">
+        <header class="glass">
+            <div class="logo">LX Sync Server</div>
+            <div class="user-controls">
+                <span id="current-user-display">请选择用户</span>
+                <button id="logout-btn">退出登录</button>
+            </div>
+        </header>
+
+        <main>
+            <div id="user-selection" class="glass">
+                <h2>选择同步用户</h2>
+                <div id="users-list" class="users-grid">
+                    <!-- Users will be loaded here -->
+                </div>
+            </div>
+
+            <div id="dashboard-content" class="hidden">
+                <div class="stats-container">
+                    <div class="stat-card glass">
+                        <h3>总歌单数</h3>
+                        <p id="total-lists">0</p>
+                    </div>
+                    <div class="stat-card glass">
+                        <h3>总歌曲数</h3>
+                        <p id="total-songs">0</p>
+                    </div>
+                    <div class="stat-card glass">
+                        <h3>最后更新</h3>
+                        <p id="last-update">-</p>
+                    </div>
+                </div>
+
+                <div class="lists-container glass">
+                    <h2>歌单详情</h2>
+                    <div id="lists-content" class="lists-grid">
+                        <!-- Lists will be rendered here -->
+                    </div>
+                </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
