@@ -356,8 +356,8 @@ const handleStartServer = async (port = 9527, ip = '127.0.0.1') => await new Pro
         if (req.method === 'DELETE') {
           void readBody(req).then(body => {
             try {
-              // 修改：同时支持单个 name 和批量 names
-              const { name, names } = JSON.parse(body)
+              // 修改：同时支持单个 name 和批量 names，以及 deleteData 参数
+              const { name, names, deleteData } = JSON.parse(body)
               const targets = names || (name ? [name] : [])
 
               if (targets.length === 0) {
@@ -367,9 +367,18 @@ const handleStartServer = async (port = 9527, ip = '127.0.0.1') => await new Pro
               }
 
               let deletedCount = 0
+              const deletedUsers: { name: string, dataPath: string }[] = []
+
               for (const targetName of targets) {
                 const idx = global.lx.config.users.findIndex(u => u.name === targetName)
                 if (idx !== -1) {
+                  const user = global.lx.config.users[idx]
+
+                  // 保存用户数据路径（如果需要删除）
+                  if (deleteData && user.dataPath) {
+                    deletedUsers.push({ name: targetName, dataPath: user.dataPath })
+                  }
+
                   // 断开该用户的连接
                   if (wss) {
                     for (const client of wss.clients) {
@@ -383,6 +392,22 @@ const handleStartServer = async (port = 9527, ip = '127.0.0.1') => await new Pro
 
               if (deletedCount > 0) {
                 saveUsers()
+
+                // 如果需要删除数据文件夹
+                if (deleteData && deletedUsers.length > 0) {
+                  for (const user of deletedUsers) {
+                    try {
+                      if (fs.existsSync(user.dataPath)) {
+                        fs.rmSync(user.dataPath, { recursive: true, force: true })
+                        console.log(`Deleted user data folder: ${user.dataPath}`)
+                      }
+                    } catch (err) {
+                      console.error(`Failed to delete user data folder for ${user.name}:`, err)
+                      // 继续删除其他用户，不中断流程
+                    }
+                  }
+                }
+
                 res.writeHead(200)
                 res.end(JSON.stringify({ success: true, deletedCount }))
               } else {

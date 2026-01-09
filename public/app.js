@@ -249,18 +249,63 @@ class App {
         }).filter(name => name); // 过滤掉无效的 name
 
         if (!names.length) return;
-        if (!confirm(`确定要删除选中的 ${names.length} 个用户吗？`)) return;
+
+        // 显示自定义确认对话框
+        const deleteData = await this.showBatchDeleteUserDialog(names.length);
+        if (deleteData === null) return; // 用户取消
 
         try {
             await this.request('/api/users', {
                 method: 'DELETE',
-                body: JSON.stringify({ names })
+                body: JSON.stringify({ names, deleteData })
             });
             this.loadUsers();
             alert('批量删除成功');
         } catch (err) {
             alert('删除失败: ' + err.message);
         }
+    }
+
+    // 显示批量删除用户确认对话框
+    async showBatchDeleteUserDialog(count) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+
+            modalTitle.textContent = '批量删除用户确认';
+            modalBody.innerHTML = `
+                <div style="padding: 1rem 0;">
+                    <p style="margin-bottom: 1rem; font-size: 1rem;">确定要删除选中的 <strong>${count}</strong> 个用户吗？</p>
+                    <div class="form-group" style="margin-top: 1.5rem;">
+                        <label class="checkbox-label" style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" id="batch-delete-user-data-checkbox" style="margin-right: 0.5rem;">
+                            <span>同时删除用户数据文件夹</span>
+                        </label>
+                        <small style="color: var(--text-secondary); display: block; margin-top: 0.5rem; margin-left: 1.5rem;">
+                            ⚠️ 勾选后将永久删除所有选中用户的数据（歌单、收藏等），不可恢复！
+                        </small>
+                    </div>
+                </div>
+                <div class="form-actions" style="margin-top: 1.5rem;">
+                    <button type="button" class="btn-primary" id="confirm-batch-delete-users">确认删除</button>
+                    <button type="button" class="btn-secondary" id="cancel-batch-delete-users">取消</button>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+
+            document.getElementById('confirm-batch-delete-users').addEventListener('click', () => {
+                const deleteData = document.getElementById('batch-delete-user-data-checkbox').checked;
+                modal.classList.add('hidden');
+                resolve(deleteData);
+            });
+
+            document.getElementById('cancel-batch-delete-users').addEventListener('click', () => {
+                modal.classList.add('hidden');
+                resolve(null);
+            });
+        });
     }
     // 全选/取消全选用户
     toggleAllUsers(checked) {
@@ -425,18 +470,62 @@ class App {
         if (!user) return;
         const username = user.name;
 
-        if (!confirm(`确定要删除用户 "${username}" 吗？`)) return;
+        // 显示自定义确认对话框
+        const deleteData = await this.showDeleteUserDialog(username);
+        if (deleteData === null) return; // 用户取消
 
         try {
             await this.request('/api/users', {
                 method: 'DELETE',
-                body: JSON.stringify({ name: username })
+                body: JSON.stringify({ name: username, deleteData })
             });
             this.loadUsers();
             this.loadDashboard();
         } catch (err) {
             alert('删除用户失败: ' + err.message);
         }
+    }
+
+    // 显示删除用户确认对话框
+    async showDeleteUserDialog(username) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+
+            modalTitle.textContent = '删除用户确认';
+            modalBody.innerHTML = `
+                <div style="padding: 1rem 0;">
+                    <p style="margin-bottom: 1rem; font-size: 1rem;">确定要删除用户 <strong>"${this.escapeHtml(username)}"</strong> 吗？</p>
+                    <div class="form-group" style="margin-top: 1.5rem;">
+                        <label class="checkbox-label" style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" id="delete-user-data-checkbox" style="margin-right: 0.5rem;">
+                            <span>同时删除用户数据文件夹</span>
+                        </label>
+                        <small style="color: var(--text-secondary); display: block; margin-top: 0.5rem; margin-left: 1.5rem;">
+                            ⚠️ 勾选后将永久删除该用户的所有数据（歌单、收藏等），不可恢复！
+                        </small>
+                    </div>
+                </div>
+                <div class="form-actions" style="margin-top: 1.5rem;">
+                    <button type="button" class="btn-primary" id="confirm-delete-user">确认删除</button>
+                    <button type="button" class="btn-secondary" id="cancel-delete-user">取消</button>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+
+            document.getElementById('confirm-delete-user').addEventListener('click', () => {
+                const deleteData = document.getElementById('delete-user-data-checkbox').checked;
+                modal.classList.add('hidden');
+                resolve(deleteData);
+            });
+
+            document.getElementById('cancel-delete-user').addEventListener('click', () => {
+                modal.classList.add('hidden');
+                resolve(null);
+            });
+        });
     }
 
     currentUserData = null;
