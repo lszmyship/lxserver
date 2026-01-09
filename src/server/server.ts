@@ -1,7 +1,7 @@
 import http, { type IncomingMessage } from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
-import { WebSocketServer } from 'ws'
+import { WebSocketServer, WebSocket } from 'ws'
 import { registerLocalSyncEvent, callObj, sync } from './sync'
 import { authCode, authConnect } from './auth'
 import { getAddress, sendStatus, decryptMsg, encryptMsg } from '@/utils/tools'
@@ -43,6 +43,7 @@ let status: LX.Sync.Status = {
 }
 
 let host = 'http://localhost'
+const sseClients = new Set<http.ServerResponse>()
 
 // const codeTools: {
 //   timeout: NodeJS.Timer | null
@@ -1102,7 +1103,32 @@ const handleStartServer = async (port = 9527, ip = '127.0.0.1') => await new Pro
           return
         }
 
-        void webdavSync.uploadBackup().then((success: boolean) => {
+        void readBody(req).then((body) => {
+          const { force } = JSON.parse(body || '{}')
+          void webdavSync.uploadBackup(force).then((success: boolean) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ success }))
+          })
+        })
+        return
+      }
+      // WebDAV Sync All Files API
+      if (pathname === '/api/webdav/sync' && req.method === 'POST') {
+        const auth = req.headers['x-frontend-auth']
+        if (auth !== global.lx.config['frontend.password']) {
+          res.writeHead(401)
+          res.end('Unauthorized')
+          return
+        }
+
+        const webdavSync = global.lx.webdavSync
+        if (!webdavSync) {
+          res.writeHead(500)
+          res.end(JSON.stringify({ success: false, message: 'WebDAV not initialized' }))
+          return
+        }
+
+        void webdavSync.syncAllFiles().then((success: boolean) => {
           res.writeHead(200, { 'Content-Type': 'application/json' })
           res.end(JSON.stringify({ success }))
         })
@@ -1151,6 +1177,30 @@ const handleStartServer = async (port = 9527, ip = '127.0.0.1') => await new Pro
         const logs = webdavSync.getSyncLogs()
         res.writeHead(200, { 'Content-Type': 'application/json' })
         res.end(JSON.stringify({ logs }))
+        return
+      }
+      // WebDAV Progress SSE API
+      if (pathname === '/api/webdav/progress' && req.method === 'GET') {
+        const auth = req.headers['x-frontend-auth'] || urlObj.searchParams.get('auth')
+        if (auth !== global.lx.config['frontend.password']) {
+          res.writeHead(401)
+          res.end('Unauthorized')
+          return
+        }
+
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        })
+        res.write('retry: 10000\\n\\n')
+
+        const client = res
+        sseClients.add(client)
+
+        req.on('close', () => {
+          sseClients.delete(client)
+        })
         return
       }
 
@@ -1395,6 +1445,28 @@ const handleStartServer = async (port = 9527, ip = '127.0.0.1') => await new Pro
   wss = new WebSocketServer({
     noServer: true,
   })
+
+  // WebDAV Sync Progress Broadcast
+  if (global.lx.webdavSync) {
+    // 移除旧的监听器以防重复添加
+    global.lx.webdavSync.removeAllListeners('progress')
+    global.lx.webdavSync.on('progress', (data: any) => {
+      // Broadcast to WebSocket clients
+      if (wss) {
+        const msg = JSON.stringify({ type: 'webdav_progress', data })
+        for (const client of wss.clients) {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(msg)
+          }
+        }
+      }
+      // Broadcast to SSE clients
+      const sseMsg = `data: ${JSON.stringify(data)}\\n\\n`
+      for (const client of sseClients) {
+        client.write(sseMsg)
+      }
+    })
+  }
 
   wss.on('connection', function (socket, request) {
     socket.isReady = false

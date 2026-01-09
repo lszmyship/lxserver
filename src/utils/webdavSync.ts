@@ -3,6 +3,7 @@ import path from 'path'
 import archiver from 'archiver'
 import { Extract } from 'unzipper'
 import crypto from 'crypto'
+import { EventEmitter } from 'events'
 
 interface WebDAVConfig {
     url: string
@@ -19,7 +20,7 @@ interface SyncLog {
     message?: string
 }
 
-class WebDAVSync {
+class WebDAVSync extends EventEmitter {
     private config: WebDAVConfig
     private dataPath: string
     private syncInterval: number
@@ -32,6 +33,7 @@ class WebDAVSync {
     private client: any = null
 
     constructor(config: WebDAVConfig, dataPath: string) {
+        super()
         this.config = {
             url: config.url || '',
             username: config.username || '',
@@ -125,14 +127,32 @@ class WebDAVSync {
 
         try {
             const localPath = path.join(this.dataPath, relativePath)
-            const content = fs.readFileSync(localPath)
+            const stat = fs.statSync(localPath)
             const remotePath = `/lx-sync/${relativePath.replace(/\\/g, '/')}`
 
             // 确保远程目录存在
             const remoteDir = path.dirname(remotePath)
             await this.client.createDirectory(remoteDir, { recursive: true })
 
+            const content = fs.readFileSync(localPath)
+
+            this.emit('progress', {
+                type: 'file',
+                status: 'uploading',
+                file: relativePath,
+                current: 0,
+                total: stat.size
+            })
+
             await this.client.putFileContents(remotePath, content)
+
+            this.emit('progress', {
+                type: 'file',
+                status: 'success',
+                file: relativePath,
+                current: stat.size,
+                total: stat.size
+            })
 
             this.addLog({
                 timestamp: Date.now(),
@@ -142,6 +162,12 @@ class WebDAVSync {
             })
             return true
         } catch (err: any) {
+            this.emit('progress', {
+                type: 'file',
+                status: 'error',
+                file: relativePath,
+                error: err.message
+            })
             this.addLog({
                 timestamp: Date.now(),
                 type: 'upload',
@@ -217,26 +243,47 @@ class WebDAVSync {
         }
     }
 
-    async uploadBackup(): Promise<boolean> {
+    async uploadBackup(force = false): Promise<boolean> {
         if (!this.client) await this.initClient()
         if (!this.client) return false
 
         try {
             // 检查是否有文件变化
-            const changed = await this.getChangedFiles()
-            if (changed.length === 0) {
-                console.log('No changes detected, skipping backup')
-                return true
+            if (!force) {
+                const changed = await this.getChangedFiles()
+                if (changed.length === 0) {
+                    console.log('No changes detected, skipping backup')
+                    return true
+                }
             }
+
+            this.emit('progress', { type: 'backup', status: 'preparing', message: '正在创建备份...' })
 
             const zipName = await this.createBackup()
             if (!zipName) return false
 
             const zipPath = path.join(this.dataPath, zipName)
+            const stat = fs.statSync(zipPath)
             const content = fs.readFileSync(zipPath)
             const remotePath = `/lx-sync-backups/${zipName}`
 
+            this.emit('progress', {
+                type: 'backup',
+                status: 'uploading',
+                file: zipName,
+                total: stat.size,
+                current: 0
+            })
+
             await this.client.putFileContents(remotePath, content)
+
+            this.emit('progress', {
+                type: 'backup',
+                status: 'success',
+                file: zipName,
+                total: stat.size,
+                current: stat.size
+            })
 
             // 清理本地zip
             fs.unlinkSync(zipPath)
@@ -253,6 +300,7 @@ class WebDAVSync {
 
             return true
         } catch (err: any) {
+            this.emit('progress', { type: 'backup', status: 'error', error: err.message })
             this.addLog({
                 timestamp: Date.now(),
                 type: 'backup',
@@ -260,6 +308,38 @@ class WebDAVSync {
                 status: 'error',
                 message: err.message,
             })
+            return false
+        }
+    }
+
+    async syncAllFiles(): Promise<boolean> {
+        if (!this.client) await this.initClient()
+        if (!this.client) return false
+
+        try {
+            const files = await this.scanFiles()
+            const fileList = Array.from(files.keys())
+            let count = 0
+            const total = fileList.length
+
+            this.emit('progress', { type: 'sync', status: 'start', total })
+
+            for (const file of fileList) {
+                count++
+                this.emit('progress', {
+                    type: 'sync',
+                    status: 'processing',
+                    current: count,
+                    total,
+                    file
+                })
+                await this.uploadFile(file)
+            }
+
+            this.emit('progress', { type: 'sync', status: 'finish', total })
+            return true
+        } catch (err) {
+            console.error('Sync all files failed:', err)
             return false
         }
     }
