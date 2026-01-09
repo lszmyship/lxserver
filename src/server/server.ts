@@ -522,6 +522,82 @@ const handleStartServer = async (port = 9527, ip = '127.0.0.1') => await new Pro
         return
       }
 
+      // [新增] 删除快照 API
+      if (pathname === '/api/data/delete-snapshot' && req.method === 'POST') {
+        const user = urlObj.searchParams.get('user')
+        if (!user) {
+          res.writeHead(400)
+          res.end('Missing user param')
+          return
+        }
+        const userSpace = getUserSpace(user)
+        if (!userSpace) {
+          res.writeHead(401)
+          res.end('Unauthorized')
+          return
+        }
+        try {
+          const body = await readBody(req)
+          const { id } = JSON.parse(body)
+          if (!id) throw new Error('Missing id')
+
+          // 调用刚刚在 ListManage 中添加的方法
+          await userSpace.listManage.removeSnapshot(id)
+
+          res.writeHead(200)
+          res.end('OK')
+        } catch (err: any) {
+          res.writeHead(500)
+          res.end(err.message)
+        }
+        return
+      }
+      // [新增] 上传快照 API
+      if (pathname === '/api/data/upload-snapshot' && req.method === 'POST') {
+        const user = urlObj.searchParams.get('user')
+        const time = parseInt(urlObj.searchParams.get('time') || '0')
+        const filename = urlObj.searchParams.get('filename')
+
+        if (!user) {
+          res.writeHead(400)
+          res.end('Missing user param')
+          return
+        }
+        if (!filename) {
+          res.writeHead(400)
+          res.end('Missing filename param')
+          return
+        }
+
+        const userSpace = getUserSpace(user)
+        if (!userSpace) {
+          res.writeHead(401)
+          res.end('Unauthorized')
+          return
+        }
+
+        try {
+          const body = await readBody(req)
+
+          // 处理文件名：如果以 snapshot_ 开头，则去掉（因为 saveSnapshotWithTime 会自动加）
+          // 如果不以 snapshot_ 开头，则保持原样（saveSnapshotWithTime 会自动加 snapshot_ 前缀）
+          let name = filename
+          if (name.startsWith('snapshot_')) {
+            name = name.substring(9)
+          }
+
+          // 调用 ListManage 中的 saveSnapshotWithTime 方法
+          await userSpace.listManage.saveSnapshotWithTime(name, body, time)
+
+          res.writeHead(200)
+          res.end('OK')
+        } catch (err: any) {
+          res.writeHead(500)
+          res.end(err.message)
+        }
+        return
+      }
+
       // 删除歌单
       if (pathname === '/api/data/delete-playlist' && req.method === 'POST') {
         const auth = req.headers['x-frontend-auth']

@@ -68,5 +68,13 @@ export class ListManage {
     this.snapshotDataManage.clearClients()
     this.snapshotDataManage.setLatest(name)
   }
+
+  removeSnapshot = async (name: string) => {
+    await this.snapshotDataManage.removeSnapshot(name)
+  }
+
+  saveSnapshotWithTime = async (name: string, data: string, time: number) => {
+    await this.snapshotDataManage.saveSnapshotWithTime(name, data, time)
+  }
 }
 

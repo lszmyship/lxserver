@@ -2352,7 +2352,7 @@ input:-webkit-autofill:active {
 
 .snapshots-table-header {
     display: grid;
-    grid-template-columns: 200px 1fr 100px 200px;
+    grid-template-columns: 200px 1fr 100px 320px;
     gap: 1rem;
     padding: 1rem 1.5rem;
     background: rgba(255, 255, 255, 0.02);
@@ -2363,7 +2363,7 @@ input:-webkit-autofill:active {
 
 .snapshot-row {
     display: grid;
-    grid-template-columns: 200px 1fr 100px 200px;
+    grid-template-columns: 200px 1fr 100px 320px;
     gap: 1rem;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--glass-border);
@@ -2393,6 +2393,7 @@ input:-webkit-autofill:active {
 }
 
 .btn-download,
+.btn-delete,
 .btn-restore {
     padding: 0.5rem 1rem;
     border-radius: 6px;
@@ -2403,6 +2404,7 @@ input:-webkit-autofill:active {
     align-items: center;
     gap: 0.5rem;
     transition: all 0.3s ease;
+
 }
 
 .btn-download {
@@ -2434,5 +2436,56 @@ input:-webkit-autofill:active {
     .col-id,
     .col-size {
         display: none;
+    }
+}
+
+/* =============== 移动端快照列表适配 =============== */
+@media (max-width: 768px) {
+
+    /* 隐藏表头，改为卡片式布局 */
+    .snapshots-table-header {
+        display: none !important;
+    }
+
+    /* 快照行改为垂直布局 */
+    .snapshot-row {
+        display: flex !important;
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 0.75rem;
+        padding: 1rem !important;
+        height: auto !important;
+    }
+
+    /* 时间显示优化 */
+    .col-time {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        text-align: left;
+    }
+
+    /* 操作按钮区域：使用网格布局，一行三个按钮 */
+    .snapshot-actions {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    /* 按钮样式调整 */
+    .snapshot-actions button,
+    .snapshot-actions .btn-delete {
+        width: 100%;
+        justify-content: center;
+        padding: 0.6rem 0.2rem !important;
+        font-size: 0.8rem !important;
+        /* 如果希望图标和文字垂直排列（图标在上），取消下面这行的注释 */
+        /* flex-direction: column; gap: 0.25rem !important; */
+    }
+
+    /* 确保删除按钮显示出来 */
+    .snapshot-actions .btn-delete {
+        display: flex !important;
     }
 }

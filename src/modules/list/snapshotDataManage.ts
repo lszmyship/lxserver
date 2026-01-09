@@ -99,6 +99,21 @@ export class SnapshotDataManage {
     }
   }
 
+  saveSnapshotWithTime = async (name: string, data: string, time: number) => {
+    syncLog.info('saveSnapshotWithTime', this.userDataManage.userName, name, time)
+    const filePath = path.join(this.snapshotDir, `snapshot_${name}`)
+    try {
+      fs.writeFileSync(filePath, data)
+      if (time) {
+        const date = new Date(time)
+        fs.utimesSync(filePath, date, date)
+      }
+    } catch (err) {
+      syncLog.error(err)
+      throw err
+    }
+  }
+
   removeSnapshot = async (name: string) => {
     syncLog.info('removeSnapshot', this.userDataManage.userName, name)
     const filePath = path.join(this.snapshotDir, `snapshot_${name}`)

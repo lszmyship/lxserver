@@ -102,6 +102,9 @@ class App {
                 installBtn.addEventListener('click', () => this.installPWA());
             }
         });
+
+        // [新增] 绑定上传事件
+        document.getElementById('snapshot-upload-input')?.addEventListener('change', (e) => this.handleSnapshotUpload(e));
     }
 
     async installPWA() {
@@ -1740,35 +1743,119 @@ class App {
             }
 
             container.innerHTML = list.map(item => `
-                <div class="snapshot-row">
-                    <div class="col-time">${new Date(item.time).toLocaleString()}</div>
-                    <div class="col-id" title="${item.id}">snapshot_${item.id}</div>
-                    <div class="col-size">${this.formatSize(item.size)}</div>
-                    <div class="col-actions snapshot-actions">
-                        <button class="btn-download" onclick="app.downloadSnapshot('${item.id}')">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            下载备份
-                        </button>
-                        <button class="btn-restore" onclick="app.restoreSnapshot('${item.id}')">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="1 4 1 10 7 10"></polyline>
-                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
-                            </svg>
-                            回滚
-                        </button>
-                    </div>
+            <div class="snapshot-row">
+                <div class="col-time">${new Date(item.time).toLocaleString()}</div>
+                <div class="col-id" title="${item.id}">snapshot_${item.id}</div>
+                <div class="col-size">${this.formatFileSize(item.size)}</div>
+                <div class="col-actions snapshot-actions">
+                    <button class="btn-download" onclick="app.downloadSnapshot('${item.id}')">
+                        <!-- 下载图标 -->
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        下载备份
+                    </button>
+                    <button class="btn-restore" onclick="app.restoreSnapshot('${item.id}')">
+                        <!-- 恢复图标 -->
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="1 4 1 10 7 10"></polyline>
+                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                        </svg>
+                        回滚
+                    </button>
+                    <!-- [新增] 删除按钮 -->
+                    <button class="btn-delete" onclick="app.deleteSnapshot('${item.id}')">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        删除
+                    </button>
                 </div>
-            `).join('');
+            </div>
+        `).join('');
         } catch (err) {
             console.error(err);
             alert('加载快照列表失败: ' + err.message);
         }
     }
+    triggerUploadSnapshot() {
+        const username = document.getElementById('snapshot-user-select')?.value;
+        if (!username) {
+            alert('请先选择用户');
+            return;
+        }
+        document.getElementById('snapshot-upload-input').click();
+    }
 
+    // [新增] 处理快照上传
+    async handleSnapshotUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const username = document.getElementById('snapshot-user-select')?.value;
+        if (!username) return;
+
+        // 重置 input，允许重复上传同名文件
+        event.target.value = '';
+
+        try {
+            const content = await file.text();
+            // 使用文件最后修改时间
+            const time = file.lastModified;
+            const filename = file.name;
+
+            const response = await fetch(`/api/data/upload-snapshot?user=${encodeURIComponent(username)}&time=${time}&filename=${encodeURIComponent(filename)}`, {
+                method: 'POST',
+                headers: {
+                    'X-Frontend-Auth': this.password
+                },
+                body: content
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text || 'Upload failed');
+            }
+
+            alert('上传成功');
+            this.loadSnapshots();
+        } catch (err) {
+            console.error(err);
+            alert('上传失败: ' + err.message);
+        }
+    }
+
+    // [新增] 删除快照
+    async deleteSnapshot(id) {
+        if (!confirm('确定要删除这个快照吗？')) return;
+
+        const username = document.getElementById('snapshot-user-select')?.value;
+        if (!username) return;
+
+        try {
+            const response = await fetch(`/api/data/delete-snapshot?user=${encodeURIComponent(username)}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Frontend-Auth': this.password
+                },
+                body: JSON.stringify({ id })
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text || 'Delete failed');
+            }
+
+            this.loadSnapshots();
+        } catch (err) {
+            console.error(err);
+            alert('删除失败: ' + err.message);
+        }
+    }
     async downloadSnapshot(id) {
         const username = document.getElementById('snapshot-user-select')?.value;
         if (!username) return alert('请先选择用户');
