@@ -85,18 +85,18 @@ http://localhost:9999
 
 支持使用环境变量覆盖 `config.js` 中的配置（Docker 部署时非常有用）：
 
-| 环境变量 | 对应配置项 | 说明 | 默认值 |
-| --- | --- | --- | --- |
-| `PORT` | `port` | 服务端口 | `9999` |
-| `BIND_IP` | `bindIP` | 绑定 IP | `0.0.0.0` |
-| `FRONTEND_PASSWORD` | `frontend.password` | Web 管理界面访问密码 | `123456` |
-| `SERVER_NAME` | `serverName` | 同步服务名称 | `My Sync Server` |
-| `MAX_SNAPSHOT_NUM` | `maxSnapshotNum` | 保留的最大快照数量 | `10` |
-| `PROXY_HEADER` | `proxy.header` | 代理转发 IP 头 (如 `x-real-ip`) | - |
-| `WEBDAV_URL` | `webdav.url` | WebDAV 地址 | - |
-| `WEBDAV_USERNAME` | `webdav.username` | WebDAV 用户名 | - |
-| `WEBDAV_PASSWORD` | `webdav.password` | WebDAV 密码 | - |
-| `SYNC_INTERVAL` | `sync.interval` | WebDAV 自动备份间隔(分钟) | `60` |
+| 环境变量              | 对应配置项            | 说明                              | 默认值             |
+| --------------------- | --------------------- | --------------------------------- | ------------------ |
+| `PORT`              | `port`              | 服务端口                          | `9527`           |
+| `BIND_IP`           | `bindIP`            | 绑定 IP                           | `0.0.0.0`        |
+| `FRONTEND_PASSWORD` | `frontend.password` | Web 管理界面访问密码              | `123456`         |
+| `SERVER_NAME`       | `serverName`        | 同步服务名称                      | `My Sync Server` |
+| `MAX_SNAPSHOT_NUM`  | `maxSnapshotNum`    | 保留的最大快照数量                | `10`             |
+| `PROXY_HEADER`      | `proxy.header`      | 代理转发 IP 头 (如 `x-real-ip`) | -                  |
+| `WEBDAV_URL`        | `webdav.url`        | WebDAV 地址                       | -                  |
+| `WEBDAV_USERNAME`   | `webdav.username`   | WebDAV 用户名                     | -                  |
+| `WEBDAV_PASSWORD`   | `webdav.password`   | WebDAV 密码                       | -                  |
+| `SYNC_INTERVAL`     | `sync.interval`     | WebDAV 自动备份间隔(分钟)         | `60`             |
 
 ### 用户配置
 
@@ -105,6 +105,7 @@ http://localhost:9999
 格式：`LX_USER_<用户名>=<密码>`
 
 示例：
+
 ```bash
 export LX_USER_admin=123456
 export LX_USER_guest=guest123
@@ -123,6 +124,7 @@ export LX_USER_guest=guest123
 ### WebDAV 云备份
 
 在 **“WebDAV 同步”** 页面配置好 WebDAV 信息后：
+
 - **立即备份**：手动触发一次全量备份打包上传。
 - **从云端恢复**：将云端的备份文件下载并覆盖本地数据（慎用）。
 - **自动备份**：系统会根据配置的间隔时间（默认 60 分钟）自动检测数据变化并备份。
