@@ -188,25 +188,8 @@ const readBody = async (req: IncomingMessage) => await new Promise<string>((reso
 })
 
 const serveStatic = (req: IncomingMessage, res: http.ServerResponse, filePath: string) => {
-  const ext = path.extname(filePath)
-  let contentType = 'text/html'
-  switch (ext) {
-    case '.js':
-      contentType = 'text/javascript'
-      break
-    case '.css':
-      contentType = 'text/css'
-      break
-    case '.json':
-      contentType = 'application/json'
-      break
-    case '.png':
-      contentType = 'image/png'
-      break
-    case '.jpg':
-      contentType = 'image/jpeg'
-      break
-  }
+  // 直接使用 getMime 函数获取正确的 Content-Type (支持 .svg 等更多格式)
+  const contentType = getMime(filePath)
 
   fs.readFile(filePath, (err, content) => {
     if (err) {

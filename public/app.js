@@ -90,6 +90,27 @@ class App {
         // WebDAV 和文件管理器
         this.bindWebDAVEvents();
         this.bindFileManagerEvents();
+
+        // PWA 安装事件
+        this.deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            this.deferredPrompt = e;
+            const installBtn = document.getElementById('install-pwa-btn');
+            if (installBtn) {
+                installBtn.style.display = 'inline-flex';
+                installBtn.addEventListener('click', () => this.installPWA());
+            }
+        });
+    }
+
+    async installPWA() {
+        if (!this.deferredPrompt) return;
+        this.deferredPrompt.prompt();
+        const { outcome } = await this.deferredPrompt.userChoice;
+        console.log(`User response to the install prompt: ${outcome}`);
+        this.deferredPrompt = null;
+        document.getElementById('install-pwa-btn').style.display = 'none';
     }
 
     async login() {

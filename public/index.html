@@ -6,6 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LX Music Sync Server - 管理控制台</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="manifest" href="manifest.json">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
@@ -131,6 +146,16 @@
             <header class="top-bar glass">
                 <h2 id="page-title">仪表盘</h2>
                 <div class="top-bar-actions">
+                    <button id="install-pwa-btn" class="btn-secondary"
+                        style="display: none; margin-right: 1rem; padding: 0.5rem 1rem; font-size: 0.875rem;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            style="width: 16px; height: 16px; margin-right: 4px;">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        <span>安装应用</span>
+                    </button>
                     <div class="status-indicator">
                         <span class="status-dot"></span>
                         <span id="server-status">服务器运行中</span>
