@@ -111,18 +111,25 @@ export class SnapshotDataManage {
 
   getSnapshotListWithMeta = async () => {
     const list = []
-    for (const name of this.snapshotInfo.list) {
-      const filePath = path.join(this.snapshotDir, `snapshot_${name}`)
-      try {
-        const stat = await fs.promises.stat(filePath)
-        list.push({
-          id: name,
-          time: stat.mtimeMs,
-          size: stat.size,
-        })
-      } catch (e) {
-        // ignore missing files
+    try {
+      const files = await fs.promises.readdir(this.snapshotDir)
+      for (const file of files) {
+        if (!file.startsWith('snapshot_')) continue
+        const name = file.replace('snapshot_', '')
+        const filePath = path.join(this.snapshotDir, file)
+        try {
+          const stat = await fs.promises.stat(filePath)
+          list.push({
+            id: name,
+            time: stat.mtimeMs,
+            size: stat.size,
+          })
+        } catch (e) {
+          // ignore missing files
+        }
       }
+    } catch (err) {
+      syncLog.error(err)
     }
     // Sort by time desc
     return list.sort((a, b) => b.time - a.time)
